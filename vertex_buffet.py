@@ -251,32 +251,59 @@ def setup_pipeline():
                 aiplatform.log_params({"action": "promoted", "mae": mae})
             print("✅ Model tagged as CHALLENGER in Registry.")
 
-        # COMPONENT 4: Generate 14-Day Forecast (The Product)
+        # COMPONENT 4: Generate 14-Day Forecast using XGBoost (The Champion)
         @dsl.component(
             base_image="python:3.11",
-            packages_to_install=["google-cloud-aiplatform", "google-cloud-bigquery"],
+            packages_to_install=["google-cloud-bigquery", "xgboost", "pandas", "numpy"],
         )
-        def generate_forecast_op(project_id: str, model_id: str, bucket: str):
-            from google.cloud import aiplatform
-            from datetime import datetime
+        def generate_xgboost_forecast_op(project_id: str):
+            from google.cloud import bigquery
+            import pandas as pd
+            import xgboost as xgb
+            import numpy as np
+            from datetime import datetime, timedelta
 
-            aiplatform.init(project=project_id)
-            model_resource = f"projects/{project_id}/locations/us-central1/models/{model_id}"
-            model = aiplatform.Model(model_resource)
+            client = bigquery.Client(project=project_id)
 
-            print(f"🔮 Generating 14-day forecast using model: {model_id}")
+            # 1. Load historical data
+            sql = f"SELECT date, price FROM `{project_id}.finance.gold_price_forecast` ORDER BY date"
+            df = client.query(sql).to_dataframe()
+            df['date'] = pd.to_datetime(df['date'])
 
-            # Trigger the Batch Prediction
-            model.batch_predict(
-                job_display_name=f"pipeline-forecast-{datetime.now().strftime('%H%M%S')}",
-                gcs_source=f"gs://{bucket}/data/gold_batch_input.csv",
-                gcs_destination_prefix=f"gs://{bucket}/predictions/pipeline/",
-                instances_format="csv",
-                predictions_format="csv",
-                machine_type="n1-standard-4",
-                sync=True,
-            )
-            print("✅ Forecast generated and saved to GCS.")
+            # 2. Feature Engineering (Lags)
+            for i in range(1, 8):
+                df[f'lag_{i}'] = df['price'].shift(i)
+
+            latest_data = df.dropna().tail(1)
+            features = [f'lag_{i}' for i in range(1, 8)]
+
+            # 3. Train production model (XGBoost) - Fast on CPU
+            model = xgb.XGBRegressor(n_estimators=100)
+            model.fit(df.dropna()[features], df.dropna()['price'])
+
+            # 4. Generate 14-day recursive forecast
+            forecasts = []
+            current_features = latest_data[features].values
+            last_date = df['date'].max()
+
+            for i in range(1, 15):
+                pred = model.predict(current_features)[0]
+                next_date = last_date + timedelta(days=i)
+                forecasts.append({
+                    "prediction_time": datetime.utcnow().isoformat(),
+                    "model_name": "xgboost-champion",
+                    "forecast_date": next_date.strftime('%Y-%m-%d'),
+                    "predicted_price": float(pred),
+                    "source": "pipeline_xgboost"
+                })
+                # Update lags for next prediction
+                current_features = np.roll(current_features, 1)
+                current_features[0][0] = pred
+
+            # 5. Log to BigQuery
+            table_id = f"{project_id}.finance.gold_predictions"
+            client.insert_rows_json(table_id, forecasts)
+            print(f"✅ XGBoost 14-day forecast logged to {table_id}")
 
         @dsl.pipeline(
             name="gold-production-orchestrator",
@@ -296,12 +323,8 @@ def setup_pipeline():
             ):
                 promote_model_op(project_id=project_id, mae=challenger.output, threshold=threshold)
 
-            # 4. Final Forecast Generation (Always runs to keep dashboard fresh)
-            generate_forecast_op(
-                project_id=project_id,
-                model_id=AUTOML_MODEL_ID,
-                bucket=BUCKET
-            ).after(audit)
+            # 4. Final Forecast Generation (Using XGBoost Champion)
+            generate_xgboost_forecast_op(project_id=project_id).after(audit)
 
         # Compile and Submit
         package_path = "gold_prod_pipeline.yaml"
