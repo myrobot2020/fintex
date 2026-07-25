@@ -86,42 +86,12 @@ def health():
 
 @app.get("/forecast", response_model=ForecastResponse)
 def forecast(horizon: int = Query(14, ge=1, le=30)):
-    if not endpoint_is_ready():
-        return ForecastResponse(
-            horizon=horizon,
-            generated_at=str(date.today()),
-            model_source="placeholder",
-            forecasts=[],
-            note="Vertex Endpoint not configured yet. Set VERTEX_ENDPOINT_ID after AutoML training finishes and redeploy.",
-        )
-    if not VERTEX_AVAILABLE:
-        raise HTTPException(status_code=500, detail="google-cloud-aiplatform not installed")
-    try:
-        aiplatform.init(project=PROJECT_ID, location=REGION)
-        endpoint = aiplatform.Endpoint(ENDPOINT_ID)
-        instances = [{"date": str(date.today()), "series_id": "GOLD"}]
-        prediction = endpoint.predict(instances=instances)
-        raw = prediction.predictions or []
-        forecasts = []
-        for i, p in enumerate(raw[:horizon]):
-            if isinstance(p, dict):
-                forecasts.append(ForecastPoint(
-                    date=p.get("date", f"t+{i+1}"),
-                    predicted_price=float(p.get("value", p.get("predicted_price", 0))),
-                    lower_bound=p.get("lower_bound"),
-                    upper_bound=p.get("upper_bound"),
-                ))
-            else:
-                forecasts.append(ForecastPoint(date=f"t+{i+1}", predicted_price=float(p)))
-        log_prediction_to_bq(horizon, [f.model_dump() for f in forecasts])
-        return ForecastResponse(
-            horizon=horizon,
-            generated_at=datetime.utcnow().isoformat() + "Z",
-            model_source=f"endpoint:{ENDPOINT_ID}",
-            forecasts=forecasts,
-        )
-    except Exception as e:
-        raise HTTPException(status_code=502, detail=f"Prediction failed: {str(e)}")
+    """
+    Main forecast entry point.
+    Note: AutoML Forecasting models are optimized for Batch Prediction.
+    This live endpoint uses the ARIMA_PLUS baseline for real-time response.
+    """
+    return forecast_arima(horizon)
 
 @app.get("/forecast/arima")
 def forecast_arima(horizon: int = Query(14, ge=1, le=30)):

@@ -4,10 +4,14 @@
 Forecasts daily gold prices using Vertex AI AutoML Forecasting, with a BigQuery ML ARIMA baseline for comparison.
 
 ## Architecture
-Live prices (yfinance) → BigQuery + GCS → Vertex Dataset → AutoML Forecasting + ARIMA baseline → Model Registry → Endpoint / Batch Prediction → Monitoring
+Live prices (yfinance) → BigQuery + GCS → Vertex Dataset → AutoML Forecasting (Batch) + ARIMA baseline (Online) → Model Registry → Cloud Run API → Monitoring
+
+## Model Usage
+- **AutoML Forecasting**: Used for high-accuracy **Batch Predictions** via `run_batch_prediction.py`.
+- **ARIMA_PLUS**: Used for **Real-time API** responses via BigQuery ML.
 
 ## Services used
-- Datasets, Training, Model Registry, Endpoints, Batch Inference
+- Datasets, Training, Model Registry, Batch Inference
 - Feature Store, Experiments, Pipelines, Monitoring
 - BigQuery ML (ARIMA_PLUS baseline)
 
