@@ -1,0 +1,35 @@
+<repository name="fintex">
+    <project_id>finance-502004</project_id>
+    <region>us-central1</region>
+    <architecture>
+        <data_ingestion>
+            <script path="multi_source_ingestion.py" role="Consensus Check"/>
+            <script path="live_ingestion.py" role="Daily Sync"/>
+            <script path="incremental_ingestion.py" role="BigQuery Merge"/>
+        </data_ingestion>
+        <models>
+            <model id="7996651861547417600" type="AutoML" rank="5"/>
+            <model id="gold_arima_baseline" type="BigQuery ARIMA" rank="Baseline"/>
+            <model path="r_champion_v4_garch.R" type="R GARCH" rank="1" mae="39.12"/>
+            <model path="tick_predictor.py" type="XGBoost Scalper" granularity="1m"/>
+        </models>
+        <serving>
+            <service name="gold-forecast-api" type="Cloud Run" url="https://gold-forecast-api-jayxrndnrq-uc.a.run.app"/>
+            <frontend path="app.R" type="Shiny"/>
+        </serving>
+        <security>
+            <service_account name="gold-api-sa" pattern="Least Privilege Reader"/>
+            <service_account name="gold-pipeline-sa" pattern="Automated Admin"/>
+        </security>
+    </architecture>
+    <files>
+        <file path="main.tf" module="Root Infra"/>
+        <file path="finance/vertex_buffet.py" module="Master Orchestrator"/>
+        <file path="finance/gcp/api/main.py" module="FastAPI Serving"/>
+    </files>
+    <cost_safety status="Zero-Burn">
+        <check name="Cloud Run Min Instances" value="0"/>
+        <check name="Vertex Endpoints" value="0 Deployed"/>
+        <check name="Feature Store" value="Online Serving OFF"/>
+    </cost_safety>
+</repository>
