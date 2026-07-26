@@ -1,0 +1,83 @@
+{
+  "project": "finance-502004",
+  "region": "us-central1",
+  "timestamp": "2026-07-25T13:33:28.547328Z",
+  "steps": {
+    "audit_models": {
+      "ok": true,
+      "detail": [
+        "gold-forecast-model-v1 | projects/411809922304/locations/us-central1/models/7996651861547417600"
+      ],
+      "at": "2026-07-25T13:33:32.003352Z"
+    },
+    "audit_endpoints": {
+      "ok": true,
+      "detail": [
+        "gold-forecast-endpoint | deployed=0 | projects/411809922304/locations/us-central1/endpoints/8004731072988315648"
+      ],
+      "at": "2026-07-25T13:33:34.780341Z"
+    },
+    "audit_featurestores": {
+      "ok": true,
+      "detail": [
+        "projects/411809922304/locations/us-central1/featurestores/gold_featurestore"
+      ],
+      "at": "2026-07-25T13:33:36.244758Z"
+    },
+    "audit_arima_model": {
+      "ok": true,
+      "detail": "finance-502004.finance.gold_arima_baseline",
+      "at": "2026-07-25T13:33:38.305463Z"
+    },
+    "experiment_arima": {
+      "ok": true,
+      "detail": {
+        "run": "arima-20260725-190340"
+      },
+      "at": "2026-07-25T13:33:57.806045Z"
+    },
+    "experiment_automl": {
+      "ok": true,
+      "detail": {
+        "r_squared": 0.58,
+        "run": "automl-20260725-190357"
+      },
+      "at": "2026-07-25T13:34:17.035060Z"
+    },
+    "registry_aliases": {
+      "ok": true,
+      "detail": "model found=projects/411809922304/locations/us-central1/models/7996651861547417600; alias update skipped (unsupported operand type(s) for +: 'Repeated' and 'list')",
+      "at": "2026-07-25T13:34:19.160049Z"
+    },
+    "pipeline_submit": {
+      "ok": false,
+      "detail": "Pipeline Error: PipelineJob resource has not been created.",
+      "at": "2026-07-25T13:34:20.279998Z"
+    },
+    "batch_predict": {
+      "ok": true,
+      "detail": "skipped (set RUN_BATCH=True to execute)",
+      "at": "2026-07-25T13:34:20.281241Z"
+    },
+    "guardrails": {
+      "ok": true,
+      "detail": {
+        "online_path": "Cloud Run + BigQuery ARIMA only",
+        "automl_path": "Batch prediction only",
+        "do_not_leave_on": [
+          "Feature Store online nodes",
+          "Endpoint deployed replicas",
+          "Idle high-budget training jobs"
+        ],
+        "monitoring": "Enable Model Monitoring only after a stable batch/online path. For now track prediction logs in finance.gold_predictions.",
+        "console_links": {
+          "experiments": "https://console.cloud.google.com/vertex-ai/experiments/experiments?project=finance-502004",
+          "models": "https://console.cloud.google.com/vertex-ai/models?project=finance-502004",
+          "pipelines": "https://console.cloud.google.com/vertex-ai/pipelines/runs?project=finance-502004",
+          "batch": "https://console.cloud.google.com/vertex-ai/batch-predictions?project=finance-502004"
+        }
+      },
+      "at": "2026-07-25T13:34:20.281903Z"
+    }
+  }
+}

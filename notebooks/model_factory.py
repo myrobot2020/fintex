@@ -56,17 +56,17 @@ def log_to_vertex(model_name, metrics, params):
 # --- MODEL 1: PROPHET ---
 def run_prophet(df):
     print("🏃 Running Prophet...")
-    train = df[df['date'] < df['date'].max() - timedelta(days=30)]
-    test = df[df['date'] >= df['date'].max() - timedelta(days=30)]
+    train = df[df['date'] < df['date'].max() - timedelta(days=30)].copy()
+    test = df[df['date'] >= df['date'].max() - timedelta(days=30)].copy()
 
     m = Prophet(daily_seasonality=True)
     m.fit(train.rename(columns={'date': 'ds', 'price': 'y'}))
 
-    future = m.make_future_dataframe(periods=30)
+    # Predict for the test dates
+    future = pd.DataFrame({'ds': test['date']})
     forecast = m.predict(future)
 
-    pred = forecast.set_index('ds').loc[test['date'], 'yhat'].values
-    mae = mean_absolute_error(test['price'], pred)
+    mae = mean_absolute_error(test['price'], forecast['yhat'])
     log_to_vertex("prophet", {"mae": float(mae)}, {"type": "time-series", "library": "meta-prophet"})
 
 # --- MODEL 2: XGBOOST ---

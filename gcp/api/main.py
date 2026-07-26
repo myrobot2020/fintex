@@ -106,7 +106,7 @@ def forecast_arima(horizon: int = Query(14, ge=1, le=30)):
             prediction_interval_lower_bound AS lower_bound,
             prediction_interval_upper_bound AS upper_bound
         FROM ML.FORECAST(
-            MODEL {PROJECT_ID}.{BQ_DATASET}.gold_arima_baseline,
+            MODEL `{PROJECT_ID}.{BQ_DATASET}.gold_arima_baseline`,
             STRUCT({horizon} AS horizon, 0.95 AS confidence_level)
         )
         ORDER BY forecast_timestamp
