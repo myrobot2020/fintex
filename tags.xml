@@ -1,0 +1,39 @@
+<tags>
+    <tag name="infrastructure">
+        <file path="main.tf"/>
+        <file path="modules/networking/main.tf"/>
+        <file path="modules/security/main.tf"/>
+        <file path="modules/database/main.tf"/>
+        <file path="modules/compute/main.tf"/>
+    </tag>
+    <tag name="orchestration">
+        <file path="finance/vertex_buffet.py"/>
+        <file path="finance/gold_prod_pipeline.yaml"/>
+    </tag>
+    <tag name="models">
+        <file path="finance/r_champion_v4_garch.R"/>
+        <file path="finance/tick_predictor.py"/>
+        <file path="finance/local_tournament.py"/>
+        <file path="finance/notebooks/model_factory.py"/>
+    </tag>
+    <tag name="data">
+        <file path="finance/incremental_ingestion.py"/>
+        <file path="finance/multi_source_ingestion.py"/>
+        <file path="finance/live_ingestion.py"/>
+    </tag>
+    <tag name="api">
+        <file path="finance/api.py"/>
+        <file path="finance/gcp/api/main.py"/>
+        <file path="finance/gcp/api/Dockerfile"/>
+    </tag>
+    <tag name="frontend">
+        <file path="app.R"/>
+    </tag>
+    <tag name="security">
+        <file path="finance/gcp/iam/setup_iam.sh"/>
+    </tag>
+    <tag name="documentation">
+        <file path="finance/REPOGROK.md"/>
+        <file path="finance/README.md"/>
+    </tag>
+</tags>
