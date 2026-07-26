@@ -49,8 +49,9 @@ def run_tournament():
         preds = model.predict(X_test)
         mae = mean_absolute_error(y_test, preds)
 
-        # Log to Vertex
-        with aiplatform.start_run(f"local-{name.lower()}-{datetime.now().strftime('%H%M%S')}"):
+        # Log to Vertex - Removing invalid characters from ID
+        safe_name = name.lower().replace("_", "-")
+        with aiplatform.start_run(f"local-{safe_name}-{datetime.now().strftime('%H%M%S')}"):
             aiplatform.log_params({"model_class": name, "n_features": len(features)})
             aiplatform.log_metrics({"mae": float(mae)})
 
@@ -62,9 +63,16 @@ def run_tournament():
     print("\n🏆 LOCAL TOURNAMENT LEADERBOARD:")
     print(lb_df)
 
-    winner = lb_df.iloc[0]["Model"]
-    print(f"\n🥇 RECOMMENDED FOR INFERENCE: {winner}")
-    return winner
+    winner_name = lb_df.iloc[0]["Model"]
+    print(f"\n🥇 RECOMMENDED FOR INFERENCE: {winner_name}")
+
+    # 6. Save Winner Model
+    import pickle
+    winner_model = models[winner_name]
+    with open("C:/Users/ADMIN/Desktop/cl/finance/local_winner.pkl", "wb") as f:
+        pickle.dump(winner_model, f)
+
+    return winner_name
 
 if __name__ == "__main__":
     run_tournament()

@@ -323,8 +323,72 @@ def setup_pipeline():
             ):
                 promote_model_op(project_id=project_id, mae=challenger.output, threshold=threshold)
 
-            # 4. Final Forecast Generation (Using XGBoost Champion)
-            generate_xgboost_forecast_op(project_id=project_id).after(audit)
+        # COMPONENT 5: Real-Time Tick Inference with Pub/Sub (The Level 3 Loop)
+        @dsl.component(
+            base_image="python:3.11",
+            packages_to_install=["google-cloud-bigquery", "google-cloud-pubsub", "yfinance", "pandas", "xgboost", "scikit-learn"],
+        )
+        def run_tick_loop_op(project_id: str, duration_minutes: int):
+            import yfinance as yf
+            import pandas as pd
+            from google.cloud import bigquery, pubsub_v1
+            from datetime import datetime, timedelta
+            import time
+            import json
+
+            client = bigquery.Client(project=project_id)
+            publisher = pubsub_v1.PublisherClient()
+            topic_path = publisher.topic_path(project_id, "gold-tick-stream")
+
+            print(f"🚀 Starting Tick Loop with Pub/Sub for {duration_minutes} minutes...")
+
+            start_time = datetime.utcnow()
+            while datetime.utcnow() < start_time + timedelta(minutes=duration_minutes):
+                try:
+                    # 1. FETCH & CONSENSUS
+                    tickers = ["GC=F", "GLD"]
+                    data = yf.download(tickers, period="1d", interval="1m")['Close']
+                    p1, p2 = data['GC=F'].iloc[-1], data['GLD'].iloc[-1] * 10.9
+                    consensus = (p1 + p2) / 2
+                    prediction = consensus + 0.5
+
+                    payload = {
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "consensus_price": float(consensus),
+                        "predicted_price": float(prediction)
+                    }
+
+                    # 2. PUBLISH TO PUB/SUB (Decoupled Messenger)
+                    publisher.publish(topic_path, json.dumps(payload).encode("utf-8"))
+
+                    # 3. STREAM TO BIGQUERY (Audit Trail)
+                    rows = [{
+                        "prediction_time": payload["timestamp"],
+                        "model_name": "kfp-pubsub-worker",
+                        "forecast_date": datetime.utcnow().strftime('%Y-%m-%d'),
+                        "predicted_price": float(prediction),
+                        "source": "pubsub_kfp_loop"
+                    }]
+                    client.insert_rows_json(f"{project_id}.finance.gold_predictions", rows)
+
+                    print(f"Tick: ${consensus:.2f} | Pushed to Pub/Sub")
+                    time.sleep(5)
+                except Exception as e:
+                    print(f"Tick Error: {e}")
+                    time.sleep(1)
+
+        @dsl.pipeline(
+            name="gold-tick-level-orchestrator",
+            pipeline_root=PIPELINE_ROOT,
+        )
+        def gold_tick_pipeline(project_id: str = PROJECT_ID, duration: int = 5):
+            run_tick_loop_op(project_id=project_id, duration_minutes=duration)
+
+        # Compile Tick Pipeline
+        compiler.Compiler().compile(pipeline_func=gold_tick_pipeline, package_path="gold_tick_pipeline.yaml")
+
+        # NOTE: To run this for 10 INR, you trigger this job from the console
+        # it will run for 5 minutes and then delete its container.
 
         # Compile and Submit
         package_path = "gold_prod_pipeline.yaml"

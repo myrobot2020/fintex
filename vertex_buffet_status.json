@@ -1,63 +1,63 @@
 {
   "project": "finance-502004",
   "region": "us-central1",
-  "timestamp": "2026-07-25T13:33:28.547328Z",
+  "timestamp": "2026-07-26T11:51:55.536939Z",
   "steps": {
     "audit_models": {
       "ok": true,
       "detail": [
         "gold-forecast-model-v1 | projects/411809922304/locations/us-central1/models/7996651861547417600"
       ],
-      "at": "2026-07-25T13:33:32.003352Z"
+      "at": "2026-07-26T11:51:58.625273Z"
     },
     "audit_endpoints": {
       "ok": true,
       "detail": [
         "gold-forecast-endpoint | deployed=0 | projects/411809922304/locations/us-central1/endpoints/8004731072988315648"
       ],
-      "at": "2026-07-25T13:33:34.780341Z"
+      "at": "2026-07-26T11:52:01.320874Z"
     },
     "audit_featurestores": {
       "ok": true,
       "detail": [
         "projects/411809922304/locations/us-central1/featurestores/gold_featurestore"
       ],
-      "at": "2026-07-25T13:33:36.244758Z"
+      "at": "2026-07-26T11:52:02.655794Z"
     },
     "audit_arima_model": {
       "ok": true,
       "detail": "finance-502004.finance.gold_arima_baseline",
-      "at": "2026-07-25T13:33:38.305463Z"
+      "at": "2026-07-26T11:52:04.599016Z"
     },
     "experiment_arima": {
       "ok": true,
       "detail": {
-        "run": "arima-20260725-190340"
+        "run": "arima-20260726-172206"
       },
-      "at": "2026-07-25T13:33:57.806045Z"
+      "at": "2026-07-26T11:52:24.116028Z"
     },
     "experiment_automl": {
       "ok": true,
       "detail": {
         "r_squared": 0.58,
-        "run": "automl-20260725-190357"
+        "run": "automl-20260726-172224"
       },
-      "at": "2026-07-25T13:34:17.035060Z"
+      "at": "2026-07-26T11:52:42.958705Z"
     },
     "registry_aliases": {
       "ok": true,
       "detail": "model found=projects/411809922304/locations/us-central1/models/7996651861547417600; alias update skipped (unsupported operand type(s) for +: 'Repeated' and 'list')",
-      "at": "2026-07-25T13:34:19.160049Z"
+      "at": "2026-07-26T11:52:44.984297Z"
     },
     "pipeline_submit": {
       "ok": false,
       "detail": "Pipeline Error: PipelineJob resource has not been created.",
-      "at": "2026-07-25T13:34:20.279998Z"
+      "at": "2026-07-26T11:52:46.670156Z"
     },
     "batch_predict": {
       "ok": true,
       "detail": "skipped (set RUN_BATCH=True to execute)",
-      "at": "2026-07-25T13:34:20.281241Z"
+      "at": "2026-07-26T11:52:46.671427Z"
     },
     "guardrails": {
       "ok": true,
@@ -77,7 +77,7 @@
           "batch": "https://console.cloud.google.com/vertex-ai/batch-predictions?project=finance-502004"
         }
       },
-      "at": "2026-07-25T13:34:20.281903Z"
+      "at": "2026-07-26T11:52:46.672284Z"
     }
   }
 }

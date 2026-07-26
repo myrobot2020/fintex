@@ -1,0 +1,6 @@
+prompt,ground_truth
+"Gold price jumped $50 after the Fed meeting. Why?","The Federal Reserve likely signaled a pause in rate hikes, weakening the dollar and making gold more attractive as a hedge."
+"Gold is trading at $4,055 today. What is the historical context?","This is near an all-time high, driven by global inflation concerns and central bank buying in 2026."
+"Explain the relationship between the 10-year Treasury yield and Gold prices.","They are generally inversely correlated; when yields rise, the opportunity cost of holding non-yielding gold increases, putting downward pressure on prices."
+"Predict the market sentiment if a surprise peace treaty is signed in a major conflict zone.","Gold prices would likely drop significantly as the 'safe-haven' premium evaporates in favor of riskier assets."
+"What does a 'Death Cross' in gold technical charts signify?","A bearish signal where the short-term moving average (50-day) crosses below the long-term moving average (200-day)."

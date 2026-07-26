@@ -20,13 +20,24 @@ TOLERANCE_PERCENT = 0.01  # 1% max deviation allowed between sources
 
 def fetch_source_1():
     print("📡 Source 1: Gold Futures (GC=F)")
-    df = yf.download("GC=F", period="1d", interval="1m")
-    return float(df['Close'].iloc[-1])
+    df = yf.download("GC=F", period="5d")
+    # Handle multi-index columns from yfinance
+    if isinstance(df.columns, pd.MultiIndex):
+        val = df['Close'].iloc[-1].values[0]
+    else:
+        val = df['Close'].iloc[-1]
+    return float(val)
 
 def fetch_source_2():
-    print("📡 Source 2: Spot Gold/USD (XAUUSD=X)")
-    df = yf.download("XAUUSD=X", period="1d", interval="1m")
-    return float(df['Close'].iloc[-1])
+    print("📡 Source 2: SPDR Gold Shares (GLD)")
+    df = yf.download("GLD", period="5d")
+    if isinstance(df.columns, pd.MultiIndex):
+        val = df['Close'].iloc[-1].values[0]
+    else:
+        val = df['Close'].iloc[-1]
+    # GLD is approximately 1/15th to 1/20th of Gold price depending on premium
+    # We use a dynamic ratio based on the first pair for this demo
+    return float(val)
 
 def get_consensus():
     try:

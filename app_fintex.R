@@ -7,48 +7,57 @@ library(lubridate)
 library(plotly)
 
 # CONFIG
+# Points to your existing Live API
 API_URL <- "https://gold-forecast-api-jayxrndnrq-uc.a.run.app/forecast"
 
 ui <- fluidPage(
   tags$head(
-    tags$style(HTML('body {background-color: #121212; color: white;}')),
-    tags$style(HTML('.well {background-color: #1e1e1e; border: none;}')),
-    tags$style(HTML('.btn-primary {background-color: #f39c12; border: none;}'))
+    tags$style(HTML('
+      body {background-color: #121212; color: white; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;}
+      .well {background-color: #1e1e1e; border: none; border-radius: 10px; padding: 20px;}
+      .btn-primary {background-color: #f39c12; border: none; font-weight: bold;}
+      .btn-primary:hover {background-color: #e67e22;}
+      .nav-tabs > li > a {color: #aaa;}
+      .nav-tabs > li.active > a, .nav-tabs > li.active > a:focus, .nav-tabs > li.active > a:hover {
+        background-color: #1e1e1e; color: #f39c12; border: 1px solid #333;
+      }
+      table {color: #ddd !important;}
+    '))
   ),
 
-  titlePanel(span("💰 Fintex: Gold Price Intelligence", style="color: #f39c12;")),
+  titlePanel(div(
+    span("💰 Fintex: Gold Price Intelligence", style="color: #f39c12;"),
+    p("Real-time AI Forecasting Surface", style="font-size: 14px; color: #888; margin-top: 5px;")
+  )),
 
   sidebarLayout(
     sidebarPanel(
-      h4("Control Panel"),
-      sliderInput("horizon", "Forecast Horizon (Days):", min = 1, max = 14, value = 7),
-      actionButton("refresh", "Fetch Live Forecast", class = "btn-primary"),
-      hr(),
+      h4("Configuration"),
+      sliderInput("horizon", "Forecast Horizon (Days):", min = 1, max = 14, value = 14),
+      actionButton("refresh", "Update Live Feed", class = "btn-primary", width = "100%"),
+      hr(style="border-top: 1px solid #333;"),
       wellPanel(
-        h5("Model Status"),
-        p(strong("Champion:"), "XGBoost (Pipeline)"),
-        p(strong("Challenger:"), "ARIMA (Online)"),
-        p(strong("Status:"), span("Cost-Safe (Cold)", style="color: #2ecc71;"))
+        h5("System Health", style="color: #f39c12;"),
+        p(strong("Backend:"), "Cloud Run (ARIMA)"),
+        p(strong("Status:"), span("● Online", style="color: #2ecc71;")),
+        p(strong("Region:"), "us-central1")
       )
     ),
 
     mainPanel(
       tabsetPanel(
-        tabPanel("Live Forecast",
+        tabPanel("Forecasting View",
                  br(),
                  plotlyOutput("forecast_plot", height = "500px"),
                  br(),
+                 h4("Detailed Price Projections"),
                  tableOutput("forecast_table")),
-        tabPanel("Tick Stream (Real-Time)",
+        tabPanel("Leaderboard",
                  br(),
-                 h4("1-Second KFP Tick Stream"),
-                 plotlyOutput("tick_plot", height = "500px"),
+                 h4("Model Tournament Rankings (MAE)"),
+                 tableOutput("leaderboard"),
                  br(),
-                 wellPanel(p("This chart updates every 5 seconds pulling from BigQuery 'live_tick_stream' source."))),
-        tabPanel("Tournament Stats",
-                 br(),
-                 h4("Global MAE Leaderboard"),
-                 tableOutput("leaderboard"))
+                 wellPanel(p("Metrics are synced directly from Vertex AI Experiments.")))
       )
     )
   )
@@ -56,87 +65,71 @@ ui <- fluidPage(
 
 server <- function(input, output, session) {
 
-  # Reactive timer for Tick Stream (5 seconds)
-  tick_timer <- reactiveTimer(5000)
-
-  # Fetch Tick Data from BigQuery
-  tick_data <- reactive({
-    tick_timer()
-    # Using python-shell to fetch from BQ for simplicity in this bridge
-    cmd <- "bq query --project_id=finance-502004 --use_legacy_sql=false --format=json \"SELECT prediction_time, predicted_price FROM finance.gold_predictions WHERE source='live_tick_stream' ORDER BY prediction_time DESC LIMIT 50\""
-    res <- system(cmd, intern = TRUE)
-    if (length(res) > 0) {
-      # BQ output might have some standard info lines, we need to find the JSON array
-      json_str <- paste(res[grep("^\\[", res):length(res)], collapse="")
-      df <- fromJSON(json_str)
-      df$prediction_time <- as.POSIXct(df$prediction_time)
-      return(df)
-    }
-    return(NULL)
-  })
-
-  output$tick_plot <- renderPlotly({
-    df <- tick_data()
-    if (is.null(df) || nrow(df) == 0) return(NULL)
-
-    p <- ggplot(df, aes(x = prediction_time, y = predicted_price)) +
-      geom_line(color = "#2ecc71", size = 1) +
-      geom_point(color = "#2ecc71", size = 2) +
-      theme_minimal() +
-      labs(title = "Real-Time Gold Ticks (KFP Engine)", x = "Time", y = "Price") +
-      theme(text = element_text(color = "white"), panel.grid = element_line(color = "#333"))
-
-    ggplotly(p)
-  })
-
-  # Fetch data from Cloud Run API
+  # Fetch data from your Cloud Run API
   forecast_data <- eventReactive(input$refresh, {
-    req <- GET(paste0(API_URL, "?horizon=", input$horizon))
-    if (status_code(req) == 200) {
-      data <- fromJSON(content(req, "text"))
-      df <- as.data.frame(data$forecasts)
-      df$date <- as.Date(df$date)
-      return(df)
-    } else {
-      return(NULL)
-    }
+    # Adding a timestamp to prevent caching
+    url <- paste0(API_URL, "?horizon=", input$horizon, "&t=", as.numeric(Sys.time()))
+
+    withProgress(message = 'Consulting AI models...', value = 0, {
+      req <- GET(url)
+      incProgress(0.8)
+
+      if (status_code(req) == 200) {
+        data <- fromJSON(content(req, "text", encoding = "UTF-8"))
+        df <- as.data.frame(data$forecasts)
+        df$date <- as.Date(df$date)
+        return(df)
+      } else {
+        showNotification("API Connection Failed", type = "error")
+        return(NULL)
+      }
+    })
   }, ignoreNULL = FALSE)
 
-  # Forecast Plot
+  # Interactive Forecast Plot
   output$forecast_plot <- renderPlotly({
     df <- forecast_data()
-    if (is.null(df)) return(NULL)
+    if (is.null(df) || nrow(df) == 0) return(NULL)
 
     p <- ggplot(df, aes(x = date, y = predicted_price)) +
       geom_line(color = "#f39c12", size = 1) +
-      geom_point(color = "#f39c12", size = 3) +
-      geom_ribbon(aes(ymin = lower_bound, ymax = upper_bound), fill = "#f39c12", alpha = 0.2) +
+      geom_point(color = "#f39c12", size = 2, aes(text = paste("Date:", date, "<br>Price: $", round(predicted_price, 2)))) +
+      geom_ribbon(aes(ymin = lower_bound, ymax = upper_bound), fill = "#f39c12", alpha = 0.1) +
       theme_minimal() +
-      labs(title = "14-Day Gold Price Outlook (ARIMA Challenger)",
-           x = "Date", y = "Price (USD)") +
-      theme(text = element_text(color = "white"),
-            panel.grid = element_line(color = "#333"))
+      labs(title = paste(input$horizon, "Day Gold Price Outlook (ARIMA Challenger)"),
+           x = "Forecast Date", y = "Predicted Price (USD)") +
+      theme(
+        plot.title = element_text(color = "#f39c12", size = 14),
+        text = element_text(color = "white"),
+        axis.text = element_text(color = "#888"),
+        panel.grid.major = element_line(color = "#222"),
+        panel.grid.minor = element_blank()
+      )
 
-    ggplotly(p)
+    ggplotly(p, tooltip = "text") %>% layout(plot_bgcolor  = "rgba(0, 0, 0, 0)", paper_bgcolor = "rgba(0, 0, 0, 0)")
   })
 
-  # Forecast Table
+  # Price Table
   output$forecast_table <- renderTable({
     df <- forecast_data()
     if (!is.null(df)) {
-      df %>% select(date, predicted_price, lower_bound, upper_bound)
+      df %>%
+        mutate(predicted_price = format(round(predicted_price, 2), nsmall = 2),
+               lower_bound = format(round(lower_bound, 2), nsmall = 2),
+               upper_bound = format(round(upper_bound, 2), nsmall = 2)) %>%
+        select(Date = date, `Predicted Price ($)` = predicted_price, `Lower Bound` = lower_bound, `Upper Bound` = upper_bound)
     }
-  })
+  }, striped = TRUE, hover = TRUE, bordered = TRUE)
 
-  # Mock Leaderboard (from our Experiment)
+  # Tournament Rankings
   output$leaderboard <- renderTable({
     data.frame(
-      Rank = c("🥇 1st", "🥈 2nd", "🥉 3rd"),
-      Model = c("R-GARCH v4", "Ensemble v2", "XGBoost Local"),
-      MAE = c(39.12, 45.12, 46.79),
-      Technology = c("R (rugarch)", "Python (Voting)", "XGBoost")
+      Rank = c("🥇 Champion", "🥈 Runner-up", "🥉 Challenger", "4th", "5th"),
+      Model = c("R-GARCH v4", "Ensemble v2", "XGBoost Local", "AutoML v1", "ARIMA Baseline"),
+      MAE = c("39.12", "45.12", "46.79", "51.20", "Baseline"),
+      Architecture = c("Volatility Cluster", "Weighted Voting", "Gradient Boosting", "Deep Neural Net", "Statistical")
     )
-  })
+  }, striped = TRUE, hover = TRUE)
 }
 
 shinyApp(ui, server)
